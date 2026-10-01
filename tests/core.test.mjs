@@ -1,0 +1,11 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {questions} from '../questions.js';
+import {makeProfile,encodeProfile,decodeProfile,compare,buildReport,reportText,validateProfile} from '../core.js';
+const a=()=>makeProfile('小鱼',Array(36).fill(0),Array(4).fill(''));
+test('36 questions, six dimensions, four meaningful options',()=>{assert.equal(questions.length,36);for(const q of questions){assert.equal(q.options.length,4);assert.equal(q.meanings.length,4);}for(let d=0;d<6;d++)assert.equal(questions.filter(q=>q.dim===d).length,6);});
+test('portable code roundtrip, Unicode, line wrapping',async()=>{const p=a();p.n='中文 🌿';p.t[0]='<script>alert(1)</script> 你好 & hello';const code=await encodeProfile(p);assert.deepEqual(await decodeProfile(code.replace(/(.{60})/g,'$1\n')),p);});
+test('reject malformed, tampered, oversized and unsupported codes',async()=>{for(const s of ['','TF1.a.123','TF1.'+'a'.repeat(6600)+'.012345678901'])await assert.rejects(decodeProfile(s));const code=await encodeProfile(a());await assert.rejects(decodeProfile(code.slice(0,-1)+(code.endsWith('0')?'1':'0')));assert.throws(()=>validateProfile({...a(),v:2}));assert.throws(()=>validateProfile({...a(),a:'0'.repeat(35)}));});
+test('identical and entirely different answers have transparent exact counts',()=>{const p=a(),q=a();assert.equal(compare(p,q).score,100);q.a='1'.repeat(36);assert.equal(compare(p,q).score,0);q.a='0'.repeat(18)+'1'.repeat(18);assert.equal(compare(p,q).score,50);});
+test('report cites selected answers, adapts relationship, and has substantive length',()=>{const p=a(),q=a();q.n='小树';q.a='1230'.repeat(9);const r=buildReport(p,q,'partner'),s=reportText(r);assert.equal(r.sections.flatMap(x=>x.items).length,18);assert.match(s,/作为伴侣/);assert.ok(s.length>3000);assert.ok(s.length<12000);for(const section of r.sections)for(const item of section.items)assert.ok(item.evidence.length>0);console.log('mixed report characters:',s.replace(/\s/g,'').length);});
+test('unshared open answers absent; only explicit text appears',()=>{const p=a(),q=a();assert.equal(buildReport(p,q).shared.length,0);p.t[1]='让我独处一会儿';assert.equal(buildReport(p,q).shared.length,1);assert.match(reportText(buildReport(p,q)),/让我独处一会儿/);});
