@@ -7,5 +7,5 @@ export async function cloudRequest(action,data){
   const result=await res.json().catch(()=>null);
   if(!res.ok||!result)throw new CloudError(res.status,result?.error||'云端暂时没有正确响应，请稍后重试。');
   return result;
- }catch(e){if(e instanceof CloudError)throw e;throw new CloudError(0,e.name==='AbortError'?'连接云端超时，请稍后重试。':'暂时连接不到云端，请检查网络后重试。');}finally{clearTimeout(timer);}
+ }catch(e){if(e instanceof CloudError)throw e;throw new CloudError(0,e.name==='AbortError'?'连接云端超时，请稍后重试。':'当前网络或浏览器无法连接云端服务。可以换到系统浏览器重试，或先用临时昵称答题。');}finally{clearTimeout(timer);}
 }
